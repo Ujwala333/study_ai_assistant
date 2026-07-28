@@ -35,13 +35,13 @@ export default function StudySession({ data, onRestart }: StudySessionProps) {
             className={`${styles.tab} ${activeTab === 'flashcards' ? styles.active : ''}`}
             onClick={() => setActiveTab('flashcards')}
           >
-            Flashcards ({data.flashcards.length})
+            Flashcards ({data.flashcards?.length ?? 0})
           </button>
           <button 
             className={`${styles.tab} ${activeTab === 'quiz' ? styles.active : ''}`}
             onClick={() => setActiveTab('quiz')}
           >
-            Practice Quiz ({data.quiz.length})
+            Practice Quiz ({data.quiz?.length ?? 0})
           </button>
         </div>
         
@@ -56,9 +56,9 @@ export default function StudySession({ data, onRestart }: StudySessionProps) {
 
       <div style={{ animation: 'fadeIn 0.3s ease' }}>
         {activeTab === 'flashcards' ? (
-          <Flashcard cards={data.flashcards} />
+          <Flashcard cards={data.flashcards ?? []} />
         ) : (
-          <Quiz questions={data.quiz} />
+          <Quiz questions={data.quiz ?? []} />
         )}
       </div>
     </div>
