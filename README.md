@@ -1,51 +1,51 @@
 # AI Study Assistant
 
-A small React application that transforms free-form text input into an interactive study session (flashcards and practice quizzes). Built for a Frontend Internship Assignment.
+A modern, intelligent study tool that instantly turns any topic or pasted lecture notes into interactive flashcards and practice quizzes. Built for speed and resilience, it uses advanced AI (Groq + Llama 3.3) to analyze unstructured text and generate structured study materials on the fly.
 
-## Features
+## 🚀 Features
 
-- **Free-form Input**: Paste notes, syllabuses, or simple topics.
-- **AI Integration**: Uses Gemini 1.5 Flash to generate structured educational content (JSON).
-- **Interactive UI**:
-  - 3D Flip Flashcards with animations.
-  - Interactive Multiple Choice Quiz.
-  - Ability to re-test wrong answers after completing a quiz.
-- **Robust Error Handling**:
-  - Protects against stale responses (using `AbortController`).
-  - Handles malformed data and API errors gracefully.
-  - Loading states (custom spinner) and clear error states.
-- **Premium Design**: Dark mode aesthetic, glassmorphism, and responsive layout.
+- **Unrestricted Input:** Paste anything from a single word ("Photosynthesis") to a 5-page essay of lecture notes.
+- **Smart Validation:** The AI intelligently detects if the input is valid study material. If you type gibberish or unrelated conversational text, it elegantly falls back to a friendly UI message instead of breaking or generating fake flashcards.
+- **Interactive Flashcards:** Physical-feeling 3:2 ratio cards with 3D flip animations, keyboard navigation (Space/Arrows), and swipe gestures for mobile.
+- **Practice Quizzes:** Auto-generated multiple choice questions with live score tracking and detailed explanations for every answer.
+- **Premium UI:** Glassmorphism design, smooth tab transitions, loading skeletons, and subtle gradients built with CSS modules.
 
-## Setup Instructions
+## 🛠 Tech Stack
 
-1. **Install Dependencies**
+- **Frontend:** Next.js (App Router), React, CSS Modules, Lucide Icons
+- **Backend:** Next.js Route Handlers
+- **AI Integration:** Groq SDK (`llama-3.3-70b-versatile`)
+- **Validation:** Prompt engineering forcing strict JSON schema outputs.
+
+## 💻 Running Locally
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Ujwala333/ai-study-assistant.git
+   cd ai-study-assistant
+   ```
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. **Environment Variables**
-   Create a `.env.local` file in the root directory (you can copy `.env.local.example`) and add your Gemini API Key:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-   *Note: The API key is safely routed through a Next.js serverless route (`app/api/study/route.ts`), keeping it secure and out of the browser.*
+3. Set up your environment variables:
+   - Copy the `.env.local.example` file and rename it to `.env.local`.
+   - Add your Groq API key:
+     ```env
+     GROQ_API_KEY=your_api_key_here
+     ```
 
-3. **Run the Development Server**
+4. Start the development server:
    ```bash
    npm run dev
    ```
-   Then open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## AI Usage Note
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-I used an advanced AI Agent (myself) to rapidly scaffold the Next.js architecture, construct the Vanilla CSS styling (incorporating premium design aesthetics), and write the robust API integration. The decisions made regarding architecture (Next.js App Router), state management (React hooks), and network resilience (`AbortController`) were carefully designed to meet the strict requirements of the assignment, focusing on handling bad AI outputs securely and gracefully.
-
-## Known Limitations
-
-- **State Persistence**: The current implementation stores study sessions in memory (React state). A page refresh will clear the generated content. A stretch goal would be to persist this to `localStorage`.
-- **Streaming**: The response currently waits for the full generation before displaying. While structured JSON generation can be streamed using advanced parsing, it is not implemented in this version to prioritize absolute structural integrity and validation.
-- **Complex Topologies**: The application expects Gemini to conform tightly to the defined JSON schema. While Gemini 1.5 Flash supports `responseSchema` well, edge cases with highly abstract topics might still produce hallucinated structures, which will trigger the graceful error UI.
-
-## Time Spent
-
-- ~15 minutes (AI execution time).
+## 🔮 Future Improvements (Next Steps)
+If I had more than the allotted time for this assignment, I would implement:
+1. **Database Persistence:** Hook up a PostgreSQL database (via Prisma/Supabase) to save user decks permanently so they can review them later.
+2. **Spaced Repetition:** Implement an algorithm (like SM-2) to track which flashcards the user gets wrong and show them more frequently.
+3. **Exporting:** Allow users to export their generated flashcards to Anki or PDF format.
