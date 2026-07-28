@@ -112,7 +112,7 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <StudySession data={studyData} />
+            <StudySession data={studyData} onRestart={handleReset} />
           )}
         </>
       )}
