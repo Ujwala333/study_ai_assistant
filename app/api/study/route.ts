@@ -1,18 +1,20 @@
 import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from 'next/server';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || '',
-});
-
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.GROQ_API_KEY) {
+    const apiKey = process.env.GROQ_API_KEY;
+    
+    if (!apiKey) {
       return NextResponse.json(
         { error: 'Server configuration error: GROQ_API_KEY is not set.' },
         { status: 500 }
       );
     }
+
+    // Initialize client inside handler so env vars are available at runtime
+    const groq = new Groq({ apiKey });
+
 
     const body = await req.json();
     const { topic } = body;
