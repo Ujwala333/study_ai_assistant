@@ -1,5 +1,7 @@
 # AI Study Assistant
 
+🌐 **Live Demo:** [https://study-ai-assistant-opal.vercel.app](https://study-ai-assistant-opal.vercel.app)
+
 A modern, intelligent study tool that instantly turns any topic or pasted lecture notes into interactive flashcards and practice quizzes. Built for speed and resilience, it uses advanced AI (Groq + Llama 3.3) to analyze unstructured text and generate structured study materials on the fly.
 
 ## 🚀 Features
