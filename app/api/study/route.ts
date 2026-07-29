@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Required for streaming on Vercel — prevents static caching
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GROQ_API_KEY;
@@ -81,14 +84,16 @@ Rules:
       async start(controller) {
         const reader = groqResponse.body!.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const text = decoder.decode(value, { stream: true });
-            const lines = text.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
 
             for (const line of lines) {
               const trimmed = line.trim();
