@@ -52,7 +52,7 @@ Rules:
 2. If the input is invalid (gibberish, conversational, unrelated), set isStudyMaterial to false, explain why in the message, and return empty arrays for flashcards and quiz.
 3. NEVER refuse to answer. Always answer with JSON.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -65,32 +65,72 @@ Rules:
           { role: 'user', content: topic }
         ],
         temperature: 0.2,
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
+        stream: true,
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = (errorData as any)?.error?.message || `Groq API error: ${response.status}`;
-      return NextResponse.json({ error: errorMsg }, { status: response.status });
+    if (!groqResponse.ok) {
+      const errorData = await groqResponse.json().catch(() => ({}));
+      const errorMsg = (errorData as any)?.error?.message || `Groq API error: ${groqResponse.status}`;
+      return NextResponse.json({ error: errorMsg }, { status: groqResponse.status });
     }
 
-    const completion = await response.json() as any;
-    const outputText = completion?.choices?.[0]?.message?.content;
+    // Proxy Groq's SSE stream, forwarding only content delta chunks
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = groqResponse.body!.getReader();
+        const decoder = new TextDecoder();
 
-    if (!outputText) {
-      throw new Error('AI returned an empty response.');
-    }
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    try {
-      const parsedData = JSON.parse(outputText);
-      return NextResponse.json(parsedData, { status: 200 });
-    } catch {
-      return NextResponse.json(
-        { error: 'AI returned malformed data. Please try again.' },
-        { status: 500 }
-      );
-    }
+            const text = decoder.decode(value, { stream: true });
+            const lines = text.split('\n');
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed.startsWith('data: ')) continue;
+
+              const data = trimmed.slice(6);
+
+              if (data === '[DONE]') {
+                controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+                continue;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  controller.enqueue(
+                    new TextEncoder().encode(
+                      `data: ${JSON.stringify({ content })}\n\n`
+                    )
+                  );
+                }
+              } catch {
+                // ignore malformed SSE chunks
+              }
+            }
+          }
+        } catch (err) {
+          controller.error(err);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
   } catch (error: any) {
     console.error('Error generating study guide:', error);
     return NextResponse.json(

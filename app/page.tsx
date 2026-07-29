@@ -12,6 +12,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [studyData, setStudyData] = useState<StudyDataType | null>(null);
+  const [streamingText, setStreamingText] = useState<string>('');
 
   // Use AbortController to prevent stale responses
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -21,31 +22,72 @@ export default function Home() {
     if (abortController) {
       abortController.abort();
     }
-    
+
     const controller = new AbortController();
     setAbortController(controller);
-    
+
     setIsLoading(true);
     setError(null);
     setStudyData(null);
+    setStreamingText('');
 
     try {
       const response = await fetch('/api/study', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic }),
         signal: controller.signal,
       });
 
-      const data = await response.json();
-
+      // Non-streaming error response (e.g. 400, 500 before streaming starts)
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || 'Failed to generate study guide');
       }
 
-      setStudyData(data as StudyDataType);
+      // Read the SSE stream
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        // Keep the last (potentially incomplete) line in the buffer
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+
+          const data = trimmed.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const { content } = JSON.parse(data);
+            if (content) {
+              accumulated += content;
+              setStreamingText(accumulated);
+            }
+          } catch {
+            // ignore malformed chunks
+          }
+        }
+      }
+
+      // All chunks received — parse the final JSON
+      if (!accumulated) throw new Error('AI returned an empty response.');
+
+      try {
+        const parsed = JSON.parse(accumulated);
+        setStudyData(parsed as StudyDataType);
+      } catch {
+        throw new Error('AI returned malformed data. Please try again.');
+      }
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.log('Fetch aborted due to new request');
@@ -55,6 +97,7 @@ export default function Home() {
       setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+      setStreamingText('');
     }
   };
 
@@ -65,6 +108,7 @@ export default function Home() {
     setStudyData(null);
     setError(null);
     setIsLoading(false);
+    setStreamingText('');
   };
 
   return (
@@ -82,16 +126,30 @@ export default function Home() {
       </header>
 
       {!studyData && !isLoading && (
-        <InputForm 
-          onSubmit={generateStudyGuide} 
-          isLoading={isLoading} 
-          error={error} 
+        <InputForm
+          onSubmit={generateStudyGuide}
+          isLoading={isLoading}
+          error={error}
         />
       )}
 
       {isLoading && (
         <div className={styles.glassPanel}>
           <Spinner message="Analyzing content and generating study materials..." />
+
+          {/* Live streaming preview */}
+          {streamingText && (
+            <div className={styles.streamingPanel}>
+              <div className={styles.streamingHeader}>
+                <span className={styles.streamingDot} />
+                <span>AI is writing your study guide...</span>
+              </div>
+              <pre className={styles.streamingText}>
+                {streamingText}
+                <span className={styles.streamingCursor} />
+              </pre>
+            </div>
+          )}
         </div>
       )}
 
@@ -102,7 +160,7 @@ export default function Home() {
               <ArrowLeft size={18} /> Back to Input
             </button>
           </div>
-          
+
           {!studyData.isStudyMaterial ? (
             <div className={`${styles.glassPanel} animate-fade-in`} style={{ textAlign: 'center', padding: '3rem 2rem' }}>
               <Info size={48} color="var(--primary)" style={{ margin: '0 auto 1rem' }} />
